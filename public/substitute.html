@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Substitute Teacher</title>
+
+<style>
+
+body{
+    margin:0;
+    font-family:'Segoe UI',sans-serif;
+    background:linear-gradient(135deg,#9B8EC7,#B4D3D9);
+    padding:30px;
+}
+
+h1{
+    text-align:center;
+    color:white;
+    margin-bottom:20px;
+}
+
+.back-btn{
+    width:150px;
+    margin-bottom:20px;
+}
+
+.container{
+    display:flex;
+    gap:20px;
+    margin-top:20px;
+    flex-wrap:wrap;
+}
+
+.card{
+    background:white;
+    border-radius:20px;
+    padding:25px;
+    flex:1;
+    min-width:350px;
+    box-shadow:0 5px 20px rgba(0,0,0,0.2);
+}
+
+h2{
+    margin-top:0;
+    color:#333;
+}
+
+select, button{
+    width:100%;
+    padding:12px;
+    margin-top:15px;
+    border-radius:10px;
+    border:none;
+    font-size:15px;
+}
+
+select{
+    border:1px solid #ccc;
+}
+
+button{
+    background:#7A6FB0;
+    color:white;
+    cursor:pointer;
+    font-weight:bold;
+    transition:0.3s;
+}
+
+button:hover{
+    transform:scale(1.03);
+}
+
+/* TABLE */
+
+.table-container{
+    max-height:500px;
+    overflow-y:auto;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:15px;
+}
+
+th{
+    background:#7A6FB0;
+    color:white;
+    padding:12px;
+    position:sticky;
+    top:0;
+}
+
+td{
+    padding:12px;
+    text-align:center;
+    border-bottom:1px solid #eee;
+}
+
+.free{
+    background:#d4edda;
+}
+
+.no-data{
+    text-align:center;
+    color:#888;
+    padding:20px;
+    font-weight:bold;
+}
+
+</style>
+</head>
+
+<body>
+
+<h1>🔄 Substitute Teacher Management</h1>
+
+<button class="back-btn" onclick="goHome()">
+⬅ Back
+</button>
+
+<div class="container">
+
+<!-- LEFT CARD -->
+<div class="card">
+
+<h2>Select Absent Teacher</h2>
+
+<select id="teacherSelect">
+    <option value="">-- Select Teacher --</option>
+</select>
+
+<button onclick="findSubstitutes()">
+Find Free Teachers
+</button>
+
+</div>
+
+<!-- RIGHT CARD -->
+<div class="card">
+
+<h2>Available Substitute Teachers</h2>
+
+<div class="table-container">
+
+<table id="subTable">
+
+<tr>
+<th>Teacher</th>
+<th>Day</th>
+<th>Period</th>
+<th>Status</th>
+</tr>
+
+</table>
+
+</div>
+
+</div>
+
+</div>
+
+<script>
+
+const BASE_URL = "http://localhost:4000";
+
+let teachers = [];
+
+/* GO HOME */
+function goHome(){
+
+    window.location.href =
+        "principal-home.html";
+}
+
+/* LOAD TEACHERS */
+async function loadTeachers(){
+
+    try{
+
+        let res = await fetch(
+            `${BASE_URL}/teacher/all-teachers`
+        );
+
+        teachers = await res.json();
+
+        let select =
+            document.getElementById("teacherSelect");
+
+        teachers.forEach(t => {
+
+            select.innerHTML += `
+            <option value="${t.teacherId}">
+                ${t.name}
+            </option>`;
+
+        });
+
+    }catch(err){
+
+        alert("Failed to load teachers");
+
+    }
+
+}
+
+/* FIND SUBSTITUTE TEACHERS */
+function findSubstitutes(){
+
+    let teacherId =
+        document.getElementById("teacherSelect").value;
+
+    if(!teacherId){
+
+        alert("Please select a teacher");
+        return;
+    }
+
+    let absentTeacher =
+        teachers.find(
+            t => t.teacherId === teacherId
+        );
+
+    let table =
+        document.getElementById("subTable");
+
+    table.innerHTML = `
+    <tr>
+        <th>Teacher</th>
+        <th>Day</th>
+        <th>Period</th>
+        <th>Status</th>
+    </tr>`;
+
+    let addedTeachers = new Set();
+
+    absentTeacher.schedule.forEach(absentSlot => {
+
+        /* Ignore FREE and Break */
+        if(
+            absentSlot.subject === "FREE" ||
+            absentSlot.subject === "Break"
+        ){
+            return;
+        }
+
+        teachers.forEach(otherTeacher => {
+
+            /* Skip same teacher */
+            if(otherTeacher.teacherId === teacherId)
+                return;
+
+            let freeSlot =
+                otherTeacher.schedule.find(s =>
+
+                    s.day === absentSlot.day &&
+                    s.period === absentSlot.period &&
+                    s.subject === "FREE"
+
+                );
+
+            if(freeSlot){
+
+                let uniqueKey =
+                    otherTeacher.teacherId +
+                    freeSlot.day +
+                    freeSlot.period;
+
+                /* Prevent duplicates */
+                if(addedTeachers.has(uniqueKey))
+                    return;
+
+                addedTeachers.add(uniqueKey);
+
+            table.innerHTML += `
+<tr class="free">
+    <td>${otherTeacher.name}</td>
+    <td>${freeSlot.day}</td>
+    <td>${freeSlot.period || getPeriodFromTime(freeSlot.time)}</td>
+    <td>Available</td>
+</tr>`;
+            }
+
+        });
+
+    });
+
+    /* No substitutes found */
+    if(addedTeachers.size === 0){
+
+        table.innerHTML += `
+        <tr>
+            <td colspan="4" class="no-data">
+                No substitute teachers available
+            </td>
+        </tr>`;
+    }
+
+}
+
+function getPeriodFromTime(time){
+
+    if(!time) return "-";
+
+    if(time.includes("9:00"))
+        return 1;
+
+    if(time.includes("10:00"))
+        return 2;
+
+    if(time.includes("11:00"))
+        return 3;
+
+    if(time.includes("1:00"))
+        return 4;
+
+    if(time.includes("2:00"))
+        return 5;
+
+    return "-";
+}
+
+/* INITIAL LOAD */
+loadTeachers();
+
+</script>
+
+</body>
+</html>

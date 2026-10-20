@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Teacher Dashboard</title>
+
+<style>
+body{
+    font-family: 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg, #9B8EC7, #B4D3D9);
+    margin: 0;
+}
+
+/* HEADER */
+.header{
+    text-align: center;
+    padding: 20px;
+    font-size: 22px;
+    color: white;
+    font-weight: 600;
+}
+
+/* GRID */
+.dashboard{
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 25px;
+    padding: 25px;
+}
+
+/* CARD */
+.card{
+    background: white;
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    transition: 0.3s;
+}
+
+.card:hover{
+    transform: translateY(-5px);
+}
+
+/* BUTTONS */
+button{
+    width: 100%;
+    padding: 12px;
+    margin-top: 10px;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.primary{ background:#6A5ACD; color:white; }
+.secondary{ background:#BDA6CE; }
+.danger{ background:#e57373; color:white; }
+
+button:hover{
+    transform: scale(1.05);
+}
+
+/* INPUT */
+input, select{
+    width: 100%;
+    padding: 10px;
+    margin-top: 10px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+}
+
+/* VIDEO */
+video{
+    width: 100%;
+    border-radius: 10px;
+}
+
+/* STATUS */
+.status{
+    text-align: center;
+    font-weight: bold;
+}
+
+/* LIST */
+#scheduleList li{
+    padding: 8px;
+    border-bottom: 1px solid #eee;
+}
+</style>
+</head>
+
+<body>
+
+<div class="header">
+    Welcome, <span id="teacherName"></span> 👋
+</div>
+
+<div class="dashboard">
+
+    <!-- CLASS STATUS -->
+    <div class="card">
+        <h3>📌 Class Status</h3>
+        <p id="currentClass">Loading...</p>
+        <p id="nextClass">Loading...</p>
+    </div>
+
+    <!-- SCHEDULE -->
+    <div class="card">
+        <h3>📅 Today's Schedule</h3>
+        <button class="primary" onclick="loadSchedule()">View Schedule</button>
+        <ul id="scheduleList" style="display:none;"></ul>
+    </div>
+
+    <!-- CAMERA -->
+    <div class="card">
+        <h3>📷 Camera</h3>
+        <video id="video" autoplay></video>
+        <button onclick="capture()">Capture Photo</button>
+    </div>
+
+    <!-- ATTENDANCE -->
+    <div class="card">
+        <h3>📝 Attendance</h3>
+        <p id="attendanceStatus">Not Marked ❌</p>
+        <button class="primary" onclick="markAttendance()">Mark Attendance</button>
+    </div>
+
+    <!-- CLASS CONTROL -->
+    <div class="card">
+        <h3>🏫 Class Control</h3>
+
+        <select id="room">
+            <option value="">--Select Class--</option>
+            <option value="5">Class 5</option>
+            <option value="6">Class 6</option>
+            <option value="7">Class 7</option>
+            <option value="8">Class 8</option>
+            <option value="9">Class 9</option>
+            <option value="10">Class 10</option>
+        </select>
+
+        <button class="primary" onclick="startClass()">Start Class</button>
+        <button class="secondary" onclick="endClass()">End Class</button>
+    </div>
+
+</div>
+
+<!-- STATUS -->
+<div class="card status">
+    <p id="status">Waiting...</p>
+</div>
+
+<!-- PASSWORD -->
+<div class="card" style="max-width:300px;margin:20px auto;">
+    <h3>🔒 Change Password</h3>
+    <input type="password" id="oldPass" placeholder="Old Password">
+    <input type="password" id="newPass" placeholder="New Password">
+    <button onclick="changePassword()">Update</button>
+</div>
+
+<div style="text-align:center;margin:20px;">
+    <button class="danger" onclick="logout()">Logout</button>
+</div>
+
+<script>
+const BASE_URL = "http://localhost:4000";
+
+let teacherId = null;
+let imageData = null;
+let latitude, longitude;
+
+const campusLat = 12.9269;
+const campusLon = 77.4977;
+const allowedRadius = 500;
+
+/* LOAD USER */
+window.onload = function(){
+    teacherId = localStorage.getItem("teacherId");
+    let name = localStorage.getItem("teacherName");
+
+    if(!teacherId){
+        alert("Login again");
+        window.location.href = "login.html";
+        return;
+    }
+
+    document.getElementById("teacherName").innerText = name || "Teacher";
+};
+
+/* LOCATION */
+navigator.geolocation.getCurrentPosition(pos=>{
+    latitude = pos.coords.latitude;
+    longitude = pos.coords.longitude;
+});
+
+/* CAMERA */
+navigator.mediaDevices.getUserMedia({video:true})
+.then(stream=>{
+    document.getElementById("video").srcObject = stream;
+});
+
+/* CAPTURE */
+function capture(){
+    let canvas = document.createElement("canvas");
+    canvas.width = 300;
+    canvas.height = 200;
+    let ctx = canvas.getContext("2d");
+    let video = document.getElementById("video");
+    ctx.drawImage(video,0,0,300,200);
+    imageData = canvas.toDataURL();
+
+    setStatus("✅ Photo captured","green");
+}
+
+/* ATTENDANCE */
+async function markAttendance(){
+    if(!latitude || !longitude) return setStatus("❌ Waiting location","red");
+
+    let distance = getDistance(latitude, longitude, campusLat, campusLon);
+    if(distance > allowedRadius) return setStatus("❌ Outside campus","red");
+
+    if(!imageData) return setStatus("❌ Capture photo first","red");
+
+    await fetch(`${BASE_URL}/api/attendance/mark`,{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({teacherId, latitude, longitude, photo:imageData})
+    });
+
+    document.getElementById("attendanceStatus").innerText = "Marked ✅";
+    setStatus("✅ Attendance Marked","green");
+}
+
+/* CLASS */
+async function startClass(){
+    let room = document.getElementById("room").value;
+    if(!room) return setStatus("❌ Select class","red");
+
+    await fetch(`${BASE_URL}/api/class/start`,{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({teacherId, roomNumber:room})
+    });
+
+    setStatus("🟢 Class Started","green");
+}
+
+async function endClass(){
+    let room = document.getElementById("room").value;
+
+    await fetch(`${BASE_URL}/api/class/end`,{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({teacherId, roomNumber:room})
+    });
+
+    setStatus("🔴 Class Ended","red");
+}
+
+/* SCHEDULE + CURRENT/NEXT */
+async function loadSchedule(){
+    let res = await fetch(`${BASE_URL}/api/schedule/${teacherId}`);
+    let data = await res.json();
+
+    let list = document.getElementById("scheduleList");
+    list.innerHTML = "";
+
+    let today = new Date().toLocaleString('en-US',{weekday:'long'});
+    let todaySchedule = data.filter(item => item.day === today);
+
+    todaySchedule.forEach(item=>{
+        let li = document.createElement("li");
+        li.innerHTML = `
+        📘 <b>${item.time}</b> - ${item.subject}
+        <br><small>🏫 ${item.room}</small>
+        `;
+        list.appendChild(li);
+    });
+
+    if(list.innerHTML === ""){
+        list.innerHTML = "<li>No classes today</li>";
+    }
+
+    list.style.display = "block";
+
+    // CURRENT + NEXT
+    let { current, next } = getCurrentAndNextClass(todaySchedule);
+
+    document.getElementById("currentClass").innerText =
+        current ? `🟢 ${current.subject} (${current.room})` : "No ongoing class";
+
+    document.getElementById("nextClass").innerText =
+        next ? `⏭ ${next.subject} at ${next.time}` : "No more classes";
+}
+
+/* PASSWORD */
+async function changePassword(){
+    let oldPassword = oldPass.value;
+    let newPassword = newPass.value;
+
+    let res = await fetch(`${BASE_URL}/api/change-password`,{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({teacherId, oldPassword, newPassword})
+    });
+
+    let data = await res.json();
+    setStatus(data.success ? "✅ Updated" : "❌ Failed","black");
+
+    oldPass.value = "";
+    newPass.value = "";
+}
+
+/* LOGOUT */
+async function logout(){
+    await fetch(`${BASE_URL}/api/attendance/logout`,{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({teacherId})
+    });
+
+    localStorage.clear();
+    window.location.href = "login.html";
+}
+
+/* UTIL */
+function setStatus(msg,color){
+    let s = document.getElementById("status");
+    s.innerText = msg;
+    s.style.color = color;
+}
+
+function getDistance(lat1, lon1, lat2, lon2){
+    const R = 6371;
+    const dLat = (lat2-lat1)*Math.PI/180;
+    const dLon = (lon2-lon1)*Math.PI/180;
+
+    const a = Math.sin(dLat/2)**2 +
+    Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*
+    Math.sin(dLon/2)**2;
+
+    return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a))*1000;
+}
+
+function getCurrentAndNextClass(schedule){
+    let now = new Date();
+    let current = null;
+    let next = null;
+
+    schedule.forEach(item=>{
+        let [time, mod] = item.time.split(" ");
+        let [h,m] = time.split(":");
+
+        h = parseInt(h);
+        if(mod==="PM" && h!==12) h+=12;
+        if(mod==="AM" && h===12) h=0;
+
+        let start = new Date();
+        start.setHours(h,m,0);
+
+        let end = new Date(start);
+        end.setHours(start.getHours()+1);
+
+        if(now>=start && now<=end) current = item;
+        if(now<start && !next) next = item;
+    });
+
+    return {current,next};
+}
+</script>
+
+</body>
+</html>

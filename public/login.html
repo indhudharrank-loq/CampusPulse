@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Teacher Login</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="style.css">
+
+<style>
+body{
+    font-family: Arial;
+    background: #F2EAE0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+.container{
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0px 4px 15px rgba(0,0,0,0.1);
+    width: 300px;
+    text-align: center;
+}
+
+h1{
+    color: #9B8EC7;
+}
+
+input{
+    width: 90%;
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+}
+
+button{
+    width: 100%;
+    padding: 10px;
+    background: #9B8EC7;
+    color: #000;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+button:hover{
+    opacity: 0.85;
+}
+
+#status{
+    margin-top: 10px;
+    font-weight: bold;
+}
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>CampusPulse</h1>
+<h3>Teacher Login</h3>
+
+<input type="text" id="teacherId" placeholder="Teacher ID">
+<input type="password" id="password" placeholder="Password">
+
+<button onclick="login()">Login</button>
+<br>
+<a href="index.html">⬅ Back to Home</a>
+
+<p id="status"></p>
+
+</div>
+
+<script>
+async function login(){
+
+let teacherId = document.getElementById("teacherId").value;
+let password = document.getElementById("password").value;
+
+console.log("Trying login:", teacherId, password);
+
+try{
+
+let res = await fetch("http://localhost:4000/api/login",{
+    method:"POST",
+    headers:{
+        "Content-Type":"application/json"
+    },
+    body:JSON.stringify({teacherId,password})
+});
+
+console.log("Response status:", res.status);
+
+let data = await res.json();
+console.log("Response data:", data);
+
+if(data.success){
+    localStorage.setItem("teacherId", data.teacher.teacherId);
+    localStorage.setItem("teacherName", data.teacher.name);
+
+    window.location = "teacher.html";
+}else{
+    document.getElementById("status").innerText="❌ Invalid Login";
+}
+
+}catch(err){
+    console.log("ERROR:", err);
+    document.getElementById("status").innerText="❌ Server not reachable";
+}
+
+}
+
+</script>
+
+</body>
+</html>

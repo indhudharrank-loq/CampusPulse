@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Principal Dashboard</title>
+<link rel="stylesheet" href="style.css">
+<style>
+body{
+    font-family: Arial;
+    background: #F2EAE0;
+    text-align: center;
+}
+
+.container{
+    width: 80%;
+    margin: auto;
+}
+
+.card{
+    background: white;
+    margin: 15px;
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: 0px 3px 10px rgba(0,0,0,0.1);
+}
+h1{
+    color:#9B8EC7;
+}
+</style>
+
+</head>
+
+<body>
+
+<h1>Principal Dashboard</h1>
+
+<div class="container" id="teacherList"></div>
+
+<script>
+
+const BASE_URL = "http://localhost:4000";
+
+async function loadTeachers(){
+
+    let res = await fetch(`${BASE_URL}/teacher/all-teachers`);
+    let teachers = await res.json();
+
+    let container = document.getElementById("teacherList");
+    container.innerHTML = "";
+
+    let today = new Date().toLocaleString('en-US', { weekday: 'long' });
+
+    teachers.forEach(teacher => {
+
+        let todaySchedule = teacher.schedule.filter(s => s.day === today);
+
+        let { current, next } = getCurrentAndNext(todaySchedule);
+
+        let content = "";
+
+        if(todaySchedule.length === 0){
+            content = "<p>🎉 No classes today</p>";
+        }else{
+
+            if(current){
+                content += `<p style="color:green;">🟢 Ongoing: ${current.subject} (Room ${current.room})</p>`;
+            }else{
+                content += `<p>❌ No ongoing class</p>`;
+            }
+
+            if(next){
+                content += `<p>⏭ Next: ${next.subject} at ${next.time}</p>`;
+            }else{
+                content += `<p>End of day</p>`;
+            }
+
+            content += "<hr>";
+
+            todaySchedule.forEach(cls=>{
+                content += `<p>${cls.subject} - ${classMap[cls.room] || cls.room}(${cls.time})</p>`;
+            });
+        }
+
+        let card = document.createElement("div");
+        card.className = "card";
+
+        card.innerHTML = `
+            <h3>${teacher.name || "Unknown"} (${teacher.teacherId || "-"})</h3>
+            ${content}
+        `;
+
+        container.appendChild(card);
+    });
+}
+
+function getCurrentAndNext(schedule){
+
+    let now = new Date();
+
+    let current = null;
+    let next = null;
+
+    schedule.forEach(item => {
+
+        if(item.subject === "Break")
+            return;
+
+        // Get START TIME only
+        let startPart =
+            item.time.split(" - ")[0];
+
+        let [time, modifier] =
+            startPart.split(" ");
+
+        let [hours, minutes] =
+            time.split(":");
+
+        hours = parseInt(hours);
+        minutes = parseInt(minutes);
+
+        if(modifier === "PM" && hours !== 12)
+            hours += 12;
+
+        if(modifier === "AM" && hours === 12)
+            hours = 0;
+
+        let classTime = new Date();
+
+        classTime.setHours(
+            hours,
+            minutes,
+            0
+        );
+
+        let endTime =
+            new Date(classTime);
+
+        endTime.setHours(
+            classTime.getHours() + 1
+        );
+
+        if(now >= classTime &&
+           now <= endTime){
+
+            current = item;
+        }
+
+        if(now < classTime && !next){
+
+            next = item;
+        }
+
+    });
+
+    return { current, next };
+}
+
+window.onload = loadTeachers;
+
+async function loadStats(){
+    try{
+        let res = await fetch(`${BASE_URL}/api/stats`);
+        let data = await res.json();
+
+        document.getElementById("totalTeachers").innerText = data.totalTeachers;
+        document.getElementById("activeClasses").innerText = data.activeClasses;
+        document.getElementById("attendanceMarked").innerText = data.attendanceMarked;
+
+        setStatus("✅ Updated","green");
+
+    }catch{
+        setStatus("❌ Error loading stats","red");
+    }
+}
+
+</script>
+
+</body>
+</html>

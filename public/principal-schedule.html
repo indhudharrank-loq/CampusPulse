@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>All Teacher Schedules</title>
+
+<style>
+body{
+    margin:0;
+    font-family:'Segoe UI', sans-serif;
+    background: linear-gradient(135deg, #9B8EC7, #B4D3D9);
+}
+
+/* HEADER */
+.header{
+    text-align:center;
+    color:white;
+    padding:20px;
+    font-size:24px;
+    font-weight:bold;
+}
+
+/* CONTAINER */
+.container{
+    display:flex;
+    gap:20px;
+    padding:20px;
+}
+
+/* LEFT PANEL */
+.teachers{
+    width:30%;
+    background:white;
+    border-radius:15px;
+    padding:15px;
+    box-shadow:0 5px 20px rgba(0,0,0,0.2);
+    max-height:500px;
+    overflow-y:auto;
+}
+
+/* RIGHT PANEL */
+.schedule{
+    width:70%;
+    background:white;
+    border-radius:15px;
+    padding:15px;
+    box-shadow:0 5px 20px rgba(0,0,0,0.2);
+}
+
+/* TEACHER ITEM */
+.teacher{
+    padding:12px;
+    border-bottom:1px solid #eee;
+    cursor:pointer;
+    border-radius:8px;
+    transition:0.2s;
+}
+
+.teacher:hover{
+    background:#f5f5f5;
+}
+
+.teacher.active{
+    background:#7A6FB0;
+    color:white;
+}
+
+/* TABLE */
+table{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:10px;
+}
+
+th{
+    background:#7A6FB0;
+    color:white;
+    padding:10px;
+}
+
+td{
+    padding:10px;
+    text-align:center;
+    border-bottom:1px solid #eee;
+}
+
+/* BUTTON */
+button{
+    margin:10px;
+    padding:8px 14px;
+    border:none;
+    border-radius:8px;
+    background:#7A6FB0;
+    color:white;
+    cursor:pointer;
+    font-weight:bold;
+}
+
+button:hover{
+    transform:scale(1.05);
+}
+.break-row{
+    background: #ffeaa7;
+    font-weight: bold;
+}
+.free-row{
+    background: #dfe6e9;
+    font-weight: bold;
+}
+</style>
+</head>
+
+<body>
+
+<div class="header">Teacher Schedules</div>
+
+<button onclick="goHome()">⬅ Back</button>
+
+<div class="container">
+
+<!-- LEFT -->
+<div class="teachers" id="teacherList">
+    <h3>Teachers</h3>
+</div>
+
+<!-- RIGHT -->
+<div class="schedule">
+    <h3 id="title">Select a teacher</h3>
+
+    <table id="scheduleTable">
+        <tr>
+            <th>Day</th>
+            <th>Period</th>
+            <th>Time</th>
+            <th>Subject</th>
+            <th>Class</th>
+        </tr>
+    </table>
+</div>
+
+</div>
+
+<script>
+const BASE_URL = "http://localhost:4000";
+
+/* BACK */
+function goHome(){
+    window.location.href = "principal-home.html";
+}
+
+/* LOAD TEACHERS */
+async function loadTeachers(){
+    let res = await fetch(`${BASE_URL}/teacher/all-teachers`);
+    let data = await res.json();
+
+    let list = document.getElementById("teacherList");
+    list.innerHTML = "<h3>Teachers</h3>";
+
+    data.forEach(t=>{
+        let div = document.createElement("div");
+        div.className = "teacher";
+        div.innerText = `${t.name} (${t.teacherId})`;
+
+        div.onclick = ()=>{
+            document.querySelectorAll(".teacher").forEach(el=>el.classList.remove("active"));
+            div.classList.add("active");
+            loadSchedule(t);
+        };
+
+        list.appendChild(div);
+    });
+}
+
+/* LOAD SCHEDULE */
+function loadSchedule(teacher){
+
+    document.getElementById("title").innerText =
+        `Schedule - ${teacher.name}`;
+
+    let table = document.getElementById("scheduleTable");
+
+    table.innerHTML = `
+    <tr>
+        <th>Day</th>
+        <th>Period</th>
+        <th>Time</th>
+        <th>Subject</th>
+        <th>Class</th>
+    </tr>`;
+
+    // ⚠️ HANDLE EMPTY / UNDEFINED SCHEDULE
+    if(!teacher.schedule || teacher.schedule.length === 0){
+        table.innerHTML += `
+        <tr>
+            <td colspan="5">No schedule available</td>
+        </tr>`;
+        return;
+    }
+
+    teacher.schedule.forEach(s=>{
+        let rowclass = "";
+
+        if (s.subject ==="Break"){
+            rowClass = "break-row";
+
+        }
+        if (s.subject ==="FREE"){
+            rowClass = "free-row";
+        }
+        
+        table.innerHTML += `
+        <tr class ="${rowClass}">
+            <td>${s.day || "-"}</td>
+            <td>${s.period || "-"}</td>
+            <td>${s.time || "-"}</td>
+            <td>${s.subject || "-"}</td>
+          <td>${s.class || s.room|| "-"}</td>
+        </tr>`;
+    });
+}
+
+/* START */
+loadTeachers();
+</script>
+
+</body>
+</html>

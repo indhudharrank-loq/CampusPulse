@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Principal Login</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="style.css">
+
+<style>
+body{
+    font-family: Arial;
+    background: #F2EAE0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+.container{
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0px 4px 15px rgba(0,0,0,0.1);
+    width: 300px;
+    text-align: center;
+}
+
+h1{
+    color: #9B8EC7;
+}
+
+input{
+    width: 90%;
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+}
+
+button{
+    width: 100%;
+    padding: 10px;
+    background: #9B8EC7;
+    color: #000;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+button:hover{
+    opacity: 0.85;
+}
+
+#status{
+    margin-top: 10px;
+    font-weight: bold;
+}
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>CampusPulse</h1>
+<h3>Principal Login</h3>
+
+<input type="text" id="username" placeholder="Username">
+<input type="password" id="password" placeholder="Password">
+
+<button onclick="login()">Login</button>
+<br>
+<a href="index.html">⬅ Back to Home</a>
+
+<p id="status"></p>
+
+</div>
+
+<script>
+  const BASE_URL = "http://localhost:4000";
+
+async function login(){
+
+    let username = document.getElementById("username").value;
+    let password = document.getElementById("password").value;
+
+    if(!username || !password){
+        document.getElementById("status").innerText = "❌ Enter username & password";
+        document.getElementById("status").style.color = "red";
+        return;
+    }
+
+    document.getElementById("status").innerText = "⏳ Logging in...";
+
+    let res = await fetch(`${BASE_URL}/api/principal-login`,{
+        method:"POST",
+        headers:{
+            "Content-Type":"application/json"
+        },
+        body:JSON.stringify({username,password})
+    });
+
+    if(!res.ok){
+        document.getElementById("status").innerText = "❌ Server error";
+        document.getElementById("status").style.color = "red";
+        return;
+    }
+
+    let data = await res.json();
+
+    if(data.success){
+        localStorage.setItem("principal", username);
+        window.location = "principal-home.html";
+    }else{
+        document.getElementById("status").innerText = "❌ Invalid Login";
+        document.getElementById("status").style.color = "red";
+    }
+}
+
+// Enter key support
+document.addEventListener("keypress", function(e){
+    if(e.key === "Enter"){
+        login();
+    }
+});
+
+
+</script>
+
+</body>
+</html>

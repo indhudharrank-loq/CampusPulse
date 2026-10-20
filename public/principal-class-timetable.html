@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Class Timetable</title>
+
+<style>
+body{
+    margin:0;
+    font-family:'Segoe UI', sans-serif;
+    background: linear-gradient(135deg, #9B8EC7, #B4D3D9);
+}
+
+/* HEADER */
+.header{
+    text-align:center;
+    color:white;
+    padding:20px;
+    font-size:28px;
+    font-weight:bold;
+}
+
+/* MAIN CARD */
+.card{
+    width:85%;
+    margin:20px auto;
+    background:white;
+    border-radius:20px;
+    padding:25px;
+    box-shadow:0 5px 25px rgba(0,0,0,0.2);
+}
+
+/* TOP BAR */
+.top{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:15px;
+}
+
+/* BUTTON */
+button{
+    padding:10px 18px;
+    border:none;
+    border-radius:10px;
+    background:#7A6FB0;
+    color:white;
+    font-weight:bold;
+    cursor:pointer;
+    transition:0.3s;
+}
+
+button:hover{
+    transform:scale(1.05);
+}
+
+/* DROPDOWN */
+select{
+    padding:10px;
+    border-radius:10px;
+    border:1px solid #ccc;
+    font-size:15px;
+}
+
+/* TABLE */
+table{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:25px;
+}
+
+th{
+    background:#7A6FB0;
+    color:white;
+    padding:12px;
+}
+
+td{
+    padding:12px;
+    text-align:center;
+    border-bottom:1px solid #eee;
+}
+
+tr:hover{
+    background:#f5f5f5;
+}
+
+/* BREAK */
+.break-row{
+    background:#ffeaa7;
+    font-weight:bold;
+}
+
+/* FREE */
+.free-row{
+    background:#dfe6e9;
+    font-weight:bold;
+}
+</style>
+</head>
+
+<body>
+
+<div class="header">
+    📚 Class Timetable
+</div>
+
+<div class="card">
+
+<div class="top">
+
+<button onclick="goHome()">⬅ Back</button>
+
+<div>
+    <label>Select Class:</label>
+
+    <select id="classSelect" onchange="loadClassSchedule()">
+        <option value="">--Select Class--</option>
+        <option value="Class 5">Class 5</option>
+        <option value="Class 6">Class 6</option>
+        <option value="Class 7">Class 7</option>
+        <option value="Class 8">Class 8</option>
+        <option value="Class 9">Class 9</option>
+        <option value="Class 10">Class 10</option>
+    </select>
+</div>
+
+</div>
+
+<table id="scheduleTable">
+
+<tr>
+    <th>Day</th>
+    <th>Period</th>
+    <th>Time</th>
+    <th>Subject</th>
+    <th>Teacher</th>
+</tr>
+
+</table>
+
+</div>
+
+<script>
+
+const BASE_URL = "http://localhost:4000";
+
+/* BACK */
+function goHome(){
+    window.location.href = "principal-home.html";
+}
+
+/* LOAD CLASS TIMETABLE */
+async function loadClassSchedule(){
+
+    let selectedClass =
+        document.getElementById("classSelect").value;
+
+    if(!selectedClass) return;
+
+    let res =
+        await fetch(`${BASE_URL}/teacher/all-teachers`);
+
+    let teachers = await res.json();
+
+    let table =
+        document.getElementById("scheduleTable");
+
+    table.innerHTML = `
+    <tr>
+        <th>Day</th>
+        <th>Period</th>
+        <th>Time</th>
+        <th>Subject</th>
+        <th>Teacher</th>
+    </tr>`;
+
+    let allSchedules = [];
+
+    /* Collect schedules */
+    teachers.forEach(teacher => {
+
+        teacher.schedule.forEach(s => {
+
+            if(
+
+                s.room &&
+                s.room.toLowerCase().trim() ===
+                selectedClass.toLowerCase().trim()
+
+            ){
+
+                allSchedules.push({
+                    day: s.day || "-",
+                    period: s.period || "-",
+                    time: s.time || "-",
+                    subject: s.subject || "-",
+                    teacher: teacher.name || "-"
+                });
+
+            }
+
+        });
+
+    });
+
+    /* Day order */
+    const dayOrder = {
+        "Monday":1,
+        "Tuesday":2,
+        "Wednesday":3,
+        "Thursday":4,
+        "Friday":5,
+        "Saturday":6
+    };
+
+    /* Sort */
+    allSchedules.sort((a,b)=>{
+
+        if(dayOrder[a.day] !== dayOrder[b.day]){
+            return dayOrder[a.day] - dayOrder[b.day];
+        }
+
+        return parseInt(a.period) - parseInt(b.period);
+
+    });
+
+    /* Display */
+    allSchedules.forEach(s=>{
+
+        let rowClass = "";
+
+        if(s.subject === "Break"){
+            rowClass = "break-row";
+        }
+
+        if(s.subject === "FREE"){
+            rowClass = "free-row";
+        }
+
+        table.innerHTML += `
+        <tr class="${rowClass}">
+            <td>${s.day}</td>
+            <td>${s.period}</td>
+            <td>${s.time}</td>
+            <td>${s.subject}</td>
+            <td>${s.teacher}</td>
+        </tr>`;
+    });
+
+}
+
+</script>
+
+</body>
+</html>

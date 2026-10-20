@@ -1,0 +1,129 @@
+body{
+    font-family: Arial;
+    text-align: center;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+
+    margin: 0;
+    overflow: hidden;
+
+    background: linear-gradient(135deg, #9B8EC7, #B4D3D9);
+
+    transition: 0.3s;
+}
+
+/* MAIN CARD */
+.container{
+    position: relative;
+    z-index: 1;
+
+    padding: 40px;
+    border-radius: 20px;
+
+    backdrop-filter: blur(12px);
+    background: rgba(255,255,255,0.2);
+
+    box-shadow: 0px 8px 25px rgba(0,0,0,0.2);
+
+    animation: fadeIn 1s ease-in;
+}
+
+/* TITLE */
+h1{
+    font-size: 32px;
+    color: white;
+    letter-spacing: 2px;
+    text-shadow: 0px 2px 10px rgba(255,255,255,0.5);
+}
+
+/* BUTTONS */
+button{
+    width: 200px;
+    padding: 12px;
+    margin: 15px;
+
+    border: none;
+    border-radius: 10px;
+
+    background: linear-gradient(135deg, #9B8EC7, #7A6FB0);
+
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+
+    transition: 0.3s;
+}
+
+.principal{
+    background: #9B8EC7;
+    color: black;
+}
+
+.teacher{
+    background: #BDA6CE;
+    color: black;
+}
+
+/* HOVER + CLICK */
+button:hover{
+    transform: scale(1.05);
+    box-shadow: 0px 5px 15px rgba(0,0,0,0.3);
+}
+
+button:active{
+    transform: scale(0.95);
+}
+
+/* ANIMATION */
+@keyframes fadeIn{
+    from{
+        opacity:0;
+        transform: translateY(20px);
+    }
+    to{
+        opacity:1;
+        transform: translateY(0);
+    }
+}
+
+/* BACKGROUND DECORATIONS */
+body::before,
+body::after{
+    content: "";
+    position: absolute;
+    width: 220px;
+    height: 220px;
+    background-size: cover;
+    opacity: 0.2;
+    z-index: 0;
+}
+
+/* TOP LEFT */
+body::before{
+    top: 20px;
+    left: 20px;
+    background-image: url("images/top.png");
+}
+
+/* BOTTOM RIGHT */
+body::after{
+    bottom: 20px;
+    right: 20px;
+    background-image: url("images/bottom.png");
+}
+
+/* EXTRA SHAPE (TOP RIGHT) */
+.extra-shape{
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 180px;
+    height: 180px;
+    background: url("images/side.png");
+    background-size: cover;
+    opacity: 0.15;
+    z-index: 0;
+}

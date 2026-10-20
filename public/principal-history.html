@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Principal History</title>
+
+<style>
+body{
+    font-family: 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg, #9B8EC7, #B4D3D9);
+    margin: 0;
+    padding: 20px;
+    color: #333;
+}
+
+/* HEADER */
+.header{
+    text-align: center;
+    color: white;
+    margin-bottom: 20px;
+}
+
+/* CONTROLS */
+.controls{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 25px;
+    flex-wrap: wrap;
+}
+
+/* BUTTONS */
+button{
+    padding: 10px 15px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    background: #7A6FB0;
+    color: white;
+    transition: 0.3s;
+}
+
+button:hover{
+    transform: scale(1.05);
+}
+
+.secondary{
+    background: #BDA6CE;
+    color: black;
+}
+
+/* LAYOUT */
+.container{
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    flex-wrap: wrap;
+}
+
+/* CARD */
+.card{
+    background: white;
+    padding: 20px;
+    border-radius: 15px;
+    width: 450px;
+    box-shadow: 0px 5px 20px rgba(0,0,0,0.2);
+}
+
+/* TABLE */
+table{
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th{
+    background: #7A6FB0;
+    color: white;
+    padding: 10px;
+}
+
+td{
+    padding: 10px;
+    text-align: center;
+    border-bottom: 1px solid #eee;
+}
+
+tr:hover{
+    background: #f5f5f5;
+}
+
+/* SCROLL */
+.table-container{
+    max-height: 320px;
+    overflow-y: auto;
+}
+
+/* STATUS */
+.status{
+    text-align: center;
+    margin-top: 20px;
+    font-weight: bold;
+    color: white;
+}
+</style>
+
+</head>
+
+<body>
+
+<div class="header">
+    <h1>📊 CampusPulse History</h1>
+</div>
+
+<div class="controls">
+    <button onclick="goHome()">⬅ Back</button>
+
+    <input type="date" id="filterDate">
+
+    <button onclick="filterByDate()">Filter</button>
+    <button class="secondary" onclick="loadAll()">Show All</button>
+</div>
+
+<div class="container">
+
+    <!-- ATTENDANCE -->
+    <div class="card">
+        <h3>📋 Attendance Records</h3>
+        <div class="table-container">
+            <table id="attendanceTable"></table>
+        </div>
+    </div>
+
+    <!-- CLASS -->
+    <div class="card">
+        <h3>🏫 Class Records</h3>
+        <div class="table-container">
+            <table id="classTable"></table>
+        </div>
+    </div>
+
+</div>
+
+<p id="status" class="status"></p>
+
+<script>
+
+const BASE_URL = "http://localhost:4000";
+
+let attendanceData = [];
+let classData = [];
+
+/* NAVIGATION */
+function goHome(){
+    window.location = "principal-home.html";
+}
+
+/* FORMAT DATE */
+function formatDate(date){
+    return new Date(date).toLocaleString();
+}
+
+/* LOAD ALL DATA */
+async function loadAll(){
+
+    try{
+        // Attendance
+        let attRes = await fetch(`${BASE_URL}/api/attendance/all`);
+        attendanceData = await attRes.json();
+
+        let attTable = document.getElementById("attendanceTable");
+        attTable.innerHTML = `
+        <tr>
+            <th>Teacher</th>
+            <th>Login</th>
+            <th>Logout</th>
+        </tr>`;
+
+        if(attendanceData.length === 0){
+            attTable.innerHTML += `<tr><td colspan="3">No records</td></tr>`;
+        }
+
+        attendanceData.forEach(item=>{
+            attTable.innerHTML += `
+            <tr>
+                <td>${item.teacherId || "-"}</td>
+                <td>${formatDate(item.loginTime)}</td>
+                <td>${item.logoutTime ? formatDate(item.logoutTime) : "-"}</td>
+            </tr>`;
+        });
+
+        // Classes
+        let classRes = await fetch(`${BASE_URL}/api/class/all`);
+        classData = await classRes.json();
+
+        let classTable = document.getElementById("classTable");
+        classTable.innerHTML = `
+        <tr>
+            <th>Teacher</th>
+            <th>Room</th>
+            <th>Start</th>
+            <th>End</th>
+        </tr>`;
+
+        if(classData.length === 0){
+            classTable.innerHTML += `<tr><td colspan="4">No records</td></tr>`;
+        }
+
+        classData.forEach(item=>{
+            classTable.innerHTML += `
+            <tr>
+                <td>${item.teacherId || "-"}</td>
+                <td>${item.roomNumber}</td>
+                <td>${formatDate(item.startTime)}</td>
+                <td>${item.endTime ? formatDate(item.endTime) : "-"}</td>
+            </tr>`;
+        });
+
+        setStatus("✅ Data Loaded", "lightgreen");
+
+    }catch(err){
+        setStatus("❌ Error loading data", "red");
+    }
+}
+
+/* FILTER */
+function filterByDate(){
+
+    let selected = document.getElementById("filterDate").value;
+
+    if(!selected){
+        setStatus("❌ Select a date", "red");
+        return;
+    }
+
+    let selectedDate = new Date(selected).toDateString();
+
+    // Attendance
+    let attTable = document.getElementById("attendanceTable");
+    attTable.innerHTML = `
+    <tr>
+        <th>Teacher</th>
+        <th>Login</th>
+        <th>Logout</th>
+    </tr>`;
+
+    let found = false;
+
+    attendanceData.forEach(item=>{
+        let date = new Date(item.loginTime).toDateString();
+
+        if(date === selectedDate){
+            found = true;
+            attTable.innerHTML += `
+            <tr>
+                <td>${item.teacherId || "-"}</td>
+                <td>${formatDate(item.loginTime)}</td>
+                <td>${item.logoutTime ? formatDate(item.logoutTime) : "-"}</td>
+            </tr>`;
+        }
+    });
+
+    if(!found){
+        attTable.innerHTML += `<tr><td colspan="3">No records</td></tr>`;
+    }
+
+    // Classes
+    let classTable = document.getElementById("classTable");
+    classTable.innerHTML = `
+    <tr>
+        <th>Teacher</th>
+        <th>Room</th>
+        <th>Start</th>
+        <th>End</th>
+    </tr>`;
+
+    found = false;
+
+    classData.forEach(item=>{
+        let date = new Date(item.startTime).toDateString();
+
+        if(date === selectedDate){
+            found = true;
+            classTable.innerHTML += `
+            <tr>
+                <td>${item.teacherId || "-"}</td>
+                <td>${item.roomNumber}</td>
+                <td>${formatDate(item.startTime)}</td>
+                <td>${item.endTime ? formatDate(item.endTime) : "-"}</td>
+            </tr>`;
+        }
+    });
+
+    if(!found){
+        classTable.innerHTML += `<tr><td colspan="4">No records</td></tr>`;
+    }
+
+    setStatus("📅 Filter Applied", "yellow");
+}
+
+/* STATUS */
+function setStatus(msg, color){
+    let s = document.getElementById("status");
+    s.innerText = msg;
+    s.style.color = color;
+}
+
+/* LOAD INIT */
+loadAll();
+
+</script>
+
+</body>
+</html>

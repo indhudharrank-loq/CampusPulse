@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Manual Schedule</title>
+
+<style>
+
+body{
+    margin:0;
+    font-family:'Segoe UI',sans-serif;
+    background:linear-gradient(135deg,#9B8EC7,#B4D3D9);
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    min-height:100vh;
+}
+
+.card{
+    width:450px;
+    background:white;
+    padding:30px;
+    border-radius:20px;
+    box-shadow:0 5px 20px rgba(0,0,0,0.2);
+}
+
+h2{
+    text-align:center;
+    color:#7A6FB0;
+}
+
+label{
+    font-weight:bold;
+    display:block;
+    margin-top:15px;
+}
+
+select,input{
+    width:100%;
+    padding:12px;
+    margin-top:8px;
+    border-radius:10px;
+    border:1px solid #ccc;
+    box-sizing:border-box;
+}
+
+button{
+    width:100%;
+    padding:12px;
+    margin-top:20px;
+    border:none;
+    border-radius:10px;
+    background:#7A6FB0;
+    color:white;
+    font-weight:bold;
+    cursor:pointer;
+}
+
+button:hover{
+    transform:scale(1.03);
+}
+
+.back{
+    background:#888;
+}
+
+#status{
+    text-align:center;
+    margin-top:15px;
+    font-weight:bold;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="card">
+
+<h2>🗓 Manual Schedule Update</h2>
+
+<label>Teacher</label>
+<select id="teacherSelect"></select>
+
+<label>Day</label>
+<select id="day">
+    <option>Monday</option>
+    <option>Tuesday</option>
+    <option>Wednesday</option>
+    <option>Thursday</option>
+    <option>Friday</option>
+</select>
+
+<label>Period</label>
+<select id="period">
+    <option value="1">1</option>
+    <option value="2">2</option>
+    <option value="3">3</option>
+    <option value="4">4</option>
+    <option value="5">5</option>
+</select>
+
+<label>Time</label>
+<input type="text"
+id="time"
+placeholder="Example: 10:00 AM - 11:00 AM">
+
+<label>Subject</label>
+<input type="text"
+id="subject"
+placeholder="Enter Subject">
+
+<label>Room/Class</label>
+<input type="text"
+id="room"
+placeholder="Example: Class 8">
+
+<button onclick="saveSchedule()">
+Save Schedule
+</button>
+
+<button onclick="cancelSchedule()"
+style="background:#e57373;">
+Cancel Manual Schedule
+</button>
+
+
+<button class="back" onclick="goBack()">
+⬅ Back
+</button>
+
+<p id="status"></p>
+
+</div>
+
+<script>
+
+const BASE_URL = "http://localhost:4000";
+
+let teachers = [];
+
+/* LOAD TEACHERS */
+async function loadTeachers(){
+
+    let res =
+        await fetch(
+            `${BASE_URL}/teacher/all-teachers`
+        );
+
+    teachers = await res.json();
+
+    let select =
+        document.getElementById("teacherSelect");
+
+    teachers.forEach(t=>{
+
+        select.innerHTML += `
+        <option value="${t.teacherId}">
+            ${t.name}
+        </option>`;
+    });
+
+}
+
+/* SAVE */
+async function saveSchedule(){
+
+    let teacherId =
+        document.getElementById("teacherSelect").value;
+
+    let day =
+        document.getElementById("day").value;
+
+    let period =
+        document.getElementById("period").value;
+
+    let time =
+        document.getElementById("time").value;
+
+    let subject =
+        document.getElementById("subject").value;
+
+    let room =
+        document.getElementById("room").value;
+
+    let res =
+        await fetch(
+            `${BASE_URL}/teacher/update-schedule`,
+        {
+            method:"POST",
+
+            headers:{
+                "Content-Type":"application/json"
+            },
+
+            body:JSON.stringify({
+                teacherId,
+                day,
+                period,
+                time,
+                subject,
+                room
+            })
+        });
+
+    let data = await res.json();
+
+    if(data.success){
+
+        document.getElementById("status")
+        .innerText =
+            "✅ Schedule Updated Successfully";
+
+    }else{
+
+        document.getElementById("status")
+        .innerText =
+            "❌ Failed to Update Schedule";
+    }
+
+}
+
+async function cancelSchedule(){
+
+    let teacherId =
+        document.getElementById("teacherSelect").value;
+
+    let day =
+        document.getElementById("day").value;
+
+    let period =
+        document.getElementById("period").value;
+
+    let res =
+        await fetch(
+            `${BASE_URL}/teacher/cancel-schedule`,
+        {
+            method:"POST",
+
+            headers:{
+                "Content-Type":"application/json"
+            },
+
+            body:JSON.stringify({
+                teacherId,
+                day,
+                period
+            })
+        });
+
+    let data = await res.json();
+
+    if(data.success){
+
+        document.getElementById("status")
+        .innerText =
+            "✅ Automatic Schedule Restored";
+
+    }else{
+
+        document.getElementById("status")
+        .innerText =
+            "❌ Failed to Restore Schedule";
+    }
+
+}
+
+/* BACK */
+function goBack(){
+
+    window.location.href =
+        "principal-home.html";
+}
+
+loadTeachers();
+
+</script>
+
+</body>
+</html>

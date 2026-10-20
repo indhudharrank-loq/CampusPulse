@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Add Teacher</title>
+
+<style>
+
+body{
+    margin:0;
+    font-family:'Segoe UI', sans-serif;
+    background: linear-gradient(135deg,#9B8EC7,#B4D3D9);
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    min-height:100vh;
+}
+
+.card{
+    width:420px;
+    background:white;
+    padding:35px;
+    border-radius:20px;
+    box-shadow:0 5px 25px rgba(0,0,0,0.2);
+}
+
+h2{
+    text-align:center;
+    color:#7A6FB0;
+    margin-bottom:25px;
+}
+
+label{
+    font-weight:bold;
+    color:#555;
+}
+
+input, select{
+    width:100%;
+    padding:12px;
+    margin-top:8px;
+    margin-bottom:18px;
+    border-radius:10px;
+    border:1px solid #ccc;
+    font-size:15px;
+    box-sizing:border-box;
+}
+
+button{
+    width:100%;
+    padding:12px;
+    margin-top:12px;
+    border:none;
+    border-radius:10px;
+    background:#7A6FB0;
+    color:white;
+    font-size:16px;
+    font-weight:bold;
+    cursor:pointer;
+    transition:0.3s;
+}
+
+button:hover{
+    transform:scale(1.03);
+}
+
+.backBtn{
+    background:#888;
+}
+
+#status{
+    text-align:center;
+    margin-top:18px;
+    font-weight:bold;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="card">
+
+<h2>➕ Add New Teacher</h2>
+
+<label>Teacher ID</label>
+<input type="text" id="teacherId" placeholder="Example: T005">
+
+<label>Teacher Name</label>
+<input type="text" id="name" placeholder="Enter Teacher Name">
+
+<label>Password</label>
+<input type="password" id="password" placeholder="Enter Password">
+
+<label>Department</label>
+<select id="department">
+    <option value="">Select Department</option>
+    <option>Science</option>
+    <option>Mathematics</option>
+    <option>Languages</option>
+    <option>Social</option>
+    <option>Computer</option>
+</select>
+
+<label>Subject</label>
+<select id="subject">
+    <option value="">Select Subject</option>
+    <option>Physics</option>
+    <option>Chemistry</option>
+    <option>Biology</option>
+    <option>Mathematics</option>
+    <option>English</option>
+    <option>Hindi</option>
+    <option>Kannada</option>
+    <option>History</option>
+    <option>Computer Science</option>
+</select>
+
+<button onclick="addTeacher()">
+    Add Teacher
+</button>
+
+<button class="backBtn" onclick="goHome()">
+    ⬅ Back
+</button>
+
+<p id="status"></p>
+
+</div>
+
+<script>
+
+const BASE_URL = "http://localhost:4000";
+
+function goHome(){
+    window.location.href = "principal-home.html";
+}
+
+async function addTeacher(){
+
+    let teacherId =
+        document.getElementById("teacherId").value.trim();
+
+    let name =
+        document.getElementById("name").value.trim();
+
+    let password =
+        document.getElementById("password").value.trim();
+
+    let department =
+        document.getElementById("department").value;
+
+    let subject =
+        document.getElementById("subject").value;
+
+    if(!teacherId || !name || !password ||
+       !department || !subject){
+
+        document.getElementById("status").innerText =
+            "❌ Please fill all fields";
+
+        return;
+    }
+
+    let res = await fetch(
+        `${BASE_URL}/teacher/add-teacher`,
+    {
+        method:"POST",
+        headers:{
+            "Content-Type":"application/json"
+        },
+        body:JSON.stringify({
+            teacherId,
+            name,
+            password,
+            department,
+            subject
+        })
+    });
+
+    let data = await res.json();
+
+    if(data.success){
+
+        document.getElementById("status").innerText =
+            "✅ Teacher Added Successfully";
+
+        // CLEAR FORM
+        document.getElementById("teacherId").value = "";
+        document.getElementById("name").value = "";
+        document.getElementById("password").value = "";
+        document.getElementById("department").value = "";
+        document.getElementById("subject").value = "";
+
+    }else{
+
+        document.getElementById("status").innerText =
+            "❌ Teacher already exists";
+    }
+
+}
+
+</script>
+
+</body>
+</html>

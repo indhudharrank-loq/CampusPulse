@@ -1,0 +1,545 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<title>Principal Home</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body{
+    margin:0;
+    font-family: 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg, #9B8EC7, #B4D3D9);
+}
+
+/* HEADER */
+.header{
+    padding: 20px;
+    text-align: center;
+    color: white;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+/* GRID */
+.container{
+    padding: 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px,1fr));
+    gap: 20px;
+}
+
+/* CARD */
+.card{
+    background: white;
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0px 5px 20px rgba(0,0,0,0.2);
+}
+
+/* BUTTONS */
+button{
+    width: 100%;
+    padding: 10px;
+    margin-top: 10px;
+    border:none;
+    border-radius: 8px;
+    cursor:pointer;
+    font-weight:bold;
+    transition:0.3s;
+}
+
+.primary{ background:#7A6FB0; color:white; }
+.secondary{ background:#BDA6CE; }
+.danger{ background:#e57373; color:white; }
+
+button:hover{
+    transform:scale(1.03);
+}
+
+/* TABLE */
+table{
+    width:100%;
+    border-collapse: collapse;
+}
+
+th{
+    background:#7A6FB0;
+    color:white;
+    padding:10px;
+}
+
+td{
+    padding:8px;
+    text-align:center;
+    border-bottom:1px solid #eee;
+}
+
+tr:hover{
+    background:#f5f5f5;
+}
+
+/* SCROLL */
+.scroll,
+.table-box{
+    max-height:250px;
+    overflow-y:auto;
+}
+
+/* CHART */
+.chart-card{
+    grid-column: span 2;
+    text-align:center;
+}
+
+canvas{
+    max-height:350px;
+}
+
+/* MOBILE */
+@media(max-width:768px){
+
+    .chart-card{
+        grid-column: span 1;
+    }
+}
+/* BACK BUTTON */
+.back-btn{
+    margin-left:20px;
+    padding:10px 18px;
+    border:none;
+    border-radius:10px;
+    background:#7A6FB0;
+    color:white;
+    font-weight:bold;
+    cursor:pointer;
+    transition:0.3s;
+}
+
+.back-btn:hover{
+    transform:scale(1.05);
+}
+</style>
+</head>
+
+<body>
+
+<div class="header">
+ Principal Dashboard
+</div>
+<button class="back-btn" onclick="goBack()">
+⬅ Logout
+</button>
+
+<div class="container">
+
+<!-- OVERVIEW -->
+<div class="card">
+    <h3>📊 Overview</h3>
+
+    <p>Total Teachers:
+        <span id="totalTeachers">-</span>
+    </p>
+
+    <p>Active Classes:
+        <span id="activeClasses">-</span>
+    </p>
+
+    <p>Attendance Today:
+        <span id="attendanceMarked">-</span>
+    </p>
+
+    <button onclick="loadAll()" class="secondary">
+        Refresh Dashboard
+    </button>
+</div>
+
+<!-- QUICK ACTIONS -->
+<div class="card">
+
+    <h3>⚡ Quick Actions</h3>
+
+    <button class="primary" onclick="goHistory()">
+        View Logs
+    </button>
+
+    <button class="primary" onclick="goSchedule()">
+        View Schedule
+    </button>
+
+    
+
+   
+
+    <button class="primary" onclick="openAddTeacher()">
+        ➕ Add Teacher
+    </button>
+
+    <button class="primary" onclick="openSubstitute()">
+        🔄 Substitute Teachers
+    </button>
+    <button class="primary"
+onclick="openManualSchedule()">
+🗓 Manual Scheduling
+</button>
+
+    <button class="danger" onclick="endDay()">
+        End Day
+    </button>
+
+</div>
+
+<!-- ATTENDANCE -->
+<div class="card">
+
+    <h3>📝 Today's Attendance</h3>
+
+    <div class="table-box">
+
+        <table id="attendanceTable">
+
+            <tr>
+                <th>Teacher</th>
+                <th>Login</th>
+                <th>Logout</th>
+            </tr>
+
+        </table>
+
+    </div>
+
+</div>
+
+<!-- CLASSES -->
+<div class="card">
+
+    <h3>🏫 Today's Classes</h3>
+
+    <div class="table-box">
+
+        <table id="classTable">
+
+            <tr>
+                <th>Teacher</th>
+                <th>Room</th>
+                <th>Start</th>
+                <th>End</th>
+            </tr>
+
+        </table>
+
+    </div>
+
+</div>
+
+<!-- ANALYTICS CHART -->
+<div class="card chart-card">
+
+    <h3>📈 Analytics</h3>
+
+    <canvas id="myChart"></canvas>
+
+</div>
+
+</div>
+
+<script>
+
+const BASE_URL = "http://localhost:4000";
+let chartInstance = null;
+
+/* NAVIGATION */
+
+function goBack(){
+    window.location.href =
+        "principal-login.html";
+}
+function goHistory(){
+    window.location.href = "principal-history.html";
+}
+
+function goSchedule(){
+    window.location.href = "principal-schedule.html";
+}
+
+function openAddTeacher(){
+    window.location.href = "add-teacher.html";
+}
+
+function openSubstitute(){
+    window.location.href = "substitute.html";
+}
+
+function openLiveDashboard(){
+    window.location.href = "principal-dashboard.html";
+}
+function openManualSchedule(){
+
+    window.location.href =
+        "manual-schedule.html";
+}
+
+/* LOAD ALL */
+async function loadAll(){
+
+    await loadStats();
+    await loadAttendance();
+    await loadClasses();
+    await loadChart();
+}
+
+/* STATS */
+async function loadStats(){
+
+    try{
+
+        let res = await fetch(`${BASE_URL}/api/stats`);
+        let data = await res.json();
+
+        document.getElementById("totalTeachers")
+            .innerText = data.totalTeachers;
+
+        document.getElementById("activeClasses")
+            .innerText = data.activeClasses;
+
+        document.getElementById("attendanceMarked")
+            .innerText = data.attendanceMarked;
+
+    }catch(err){
+
+        console.log("Stats Error", err);
+    }
+}
+
+/* ATTENDANCE */
+async function loadAttendance(){
+
+    let res = await fetch(
+        `${BASE_URL}/api/attendance/all`
+    );
+
+    let data = await res.json();
+
+    let table =
+        document.getElementById("attendanceTable");
+
+    table.innerHTML = `
+    <tr>
+        <th>Teacher</th>
+        <th>Login</th>
+        <th>Logout</th>
+    </tr>`;
+
+    let today = new Date().toDateString();
+
+    data.forEach(item => {
+
+        if(
+            new Date(item.loginTime)
+            .toDateString() === today
+        ){
+
+            table.innerHTML += `
+            <tr>
+                <td>${item.teacherId}</td>
+                <td>
+                    ${new Date(item.loginTime)
+                    .toLocaleTimeString()}
+                </td>
+                <td>
+                    ${item.logoutTime
+                    ? new Date(item.logoutTime)
+                    .toLocaleTimeString()
+                    : "-"}
+                </td>
+            </tr>`;
+        }
+    });
+
+    if(table.rows.length === 1){
+
+        table.innerHTML += `
+        <tr>
+            <td colspan="3">
+                No attendance records today
+            </td>
+        </tr>`;
+    }
+}
+
+/* CLASSES */
+async function loadClasses(){
+
+    let res = await fetch(
+        `${BASE_URL}/api/class/all`
+    );
+
+    let data = await res.json();
+
+    let table =
+        document.getElementById("classTable");
+
+    table.innerHTML = `
+    <tr>
+        <th>Teacher</th>
+        <th>Room</th>
+        <th>Start</th>
+        <th>End</th>
+    </tr>`;
+
+    let today = new Date().toDateString();
+
+    data.forEach(item => {
+
+        if(
+            new Date(item.startTime)
+            .toDateString() === today
+        ){
+
+            table.innerHTML += `
+            <tr>
+                <td>${item.teacherId}</td>
+                <td>${item.roomNumber}</td>
+                <td>
+                    ${new Date(item.startTime)
+                    .toLocaleTimeString()}
+                </td>
+                <td>
+                    ${item.endTime
+                    ? new Date(item.endTime)
+                    .toLocaleTimeString()
+                    : "-"}
+                </td>
+            </tr>`;
+        }
+    });
+
+    if(table.rows.length === 1){
+
+        table.innerHTML += `
+        <tr>
+            <td colspan="4">
+                No classes today
+            </td>
+        </tr>`;
+    }
+}
+
+/* CHART */
+async function loadChart(){
+
+    let attRes =
+        await fetch(`${BASE_URL}/api/attendance/all`);
+
+    let attendance =
+        await attRes.json();
+
+    let classRes =
+        await fetch(`${BASE_URL}/api/class/all`);
+
+    let classes =
+        await classRes.json();
+
+    let today =
+        new Date().toDateString();
+
+    let todayAttendance =
+        attendance.filter(a =>
+
+            new Date(a.loginTime)
+            .toDateString() === today
+
+        );
+
+    let todayClasses =
+        classes.filter(c =>
+
+            new Date(c.startTime)
+            .toDateString() === today
+
+        );
+
+    let ctx =
+        document.getElementById("myChart");
+
+    if(chartInstance)
+        chartInstance.destroy();
+
+    chartInstance = new Chart(ctx, {
+
+        type: 'bar',
+
+        data: {
+
+            labels: [
+                "Attendance",
+                "Classes"
+            ],
+
+            datasets: [{
+
+                label: "Today's Analytics",
+
+                data: [
+                    todayAttendance.length,
+                    todayClasses.length
+                ]
+
+            }]
+        },
+
+        options: {
+
+            responsive: true,
+
+            plugins: {
+
+                legend: {
+                    display: true
+                }
+
+            },
+
+            scales: {
+
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+
+            }
+
+        }
+
+    });
+
+}
+
+/* END DAY */
+async function endDay(){
+
+    await fetch(
+        `${BASE_URL}/api/end-day`,
+        {
+            method:"POST"
+        }
+    );
+
+    alert("Day Ended Successfully");
+
+    loadAll();
+}
+
+/* LOAD ON START */
+window.onload = loadAll;
+
+/* AUTO REFRESH */
+setInterval(loadAll, 10000);
+
+</script>
+
+</body>
+</html>
+
